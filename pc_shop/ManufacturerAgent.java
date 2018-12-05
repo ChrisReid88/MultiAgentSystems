@@ -16,20 +16,22 @@ import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
-import set10111.pc_shop.SupplierAgent.EndDayListener;
 
 public class ManufacturerAgent extends Agent {
 
 	private AID tickerAgent;
 	private ArrayList<AID> suppliers = new ArrayList<>();
-	private HashMap<String,ArrayList<Offer>> currentOffers = new HashMap<>();
-	private String[] parts;
+	private ArrayList<String> partsToOrder = new ArrayList<>();
+	private HashMap<String, ArrayList<Offer>> currentOffers = new HashMap<>();
 	private String order;
 	private int queriesSent;
 	private String[] proposal;
 
+
 	@Override
 	protected void setup() {
+
+		System.out.println("Manufacturer-agent " + getAID().getName() + " is ready.");
 		// add this agent to the yellow pages
 		DFAgentDescription dfd = new DFAgentDescription();
 		dfd.setName(getAID());
@@ -73,8 +75,8 @@ public class ManufacturerAgent extends Agent {
 				}
 				if (msg.getContent().equals("new day")) {
 					SequentialBehaviour dailyActivity = new SequentialBehaviour();
-					dailyActivity.addSubBehaviour(new ReceiveCustomerOrder(myAgent));
 					dailyActivity.addSubBehaviour(new FindSuppliers(myAgent));
+					dailyActivity.addSubBehaviour(new ReceiveCustomerOrder(myAgent));
 					dailyActivity.addSubBehaviour(new SupplierEnquiry(myAgent));
 					dailyActivity.addSubBehaviour(new CollectOffers(myAgent));
 					dailyActivity.addSubBehaviour(new EndDay(myAgent));
@@ -98,19 +100,20 @@ public class ManufacturerAgent extends Agent {
 
 		@Override
 		public void action() {
-			doWait(2000);
-			MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.INFORM);
+			partsToOrder.clear();
+			MessageTemplate mt = MessageTemplate.MatchConversationId("order");
 			ACLMessage msg = myAgent.receive(mt);
 			if (msg != null) {
 				order = msg.getContent();
-				parts = order.split(",");
-				System.out.print("FirstPart:" + parts[0]);
+				String[] partSep = order.split(",");
+				for (int i = 0; i < 5; i++) {
+					partsToOrder.add(partSep[i]);
+				}
+				
 			} else {
 				block();
 			}
-
 		}
-
 	}
 
 	public class FindSuppliers extends OneShotBehaviour {
@@ -129,7 +132,9 @@ public class ManufacturerAgent extends Agent {
 				DFAgentDescription[] agentsType = DFService.search(myAgent, supplierTemplate);
 				for (int i = 0; i < agentsType.length; i++) {
 					suppliers.add(agentsType[i].getName());
+
 				}
+
 
 			} catch (FIPAException e) {
 				e.printStackTrace();
@@ -145,91 +150,93 @@ public class ManufacturerAgent extends Agent {
 
 		@Override
 		public void action() {
+			//send out a call for proposals for each part
 			queriesSent = 0;
-			for (String part : parts) {
-				ACLMessage enquire = new ACLMessage(ACLMessage.CFP);
-
-				enquire.setContent(part);
-				enquire.setConversationId(part);
-
-				for (AID supplier : suppliers) {
-//					System.out.println("supplier: " + supplier);
-					enquire.addReceiver(supplier);
+			for(String part : partsToOrder) {
+				ACLMessage enquiry = new ACLMessage(ACLMessage.CFP);
+				enquiry.setContent(part);
+				enquiry.setConversationId(part);
+				for(AID supplier : suppliers) {
+					enquiry.addReceiver(supplier);
 					queriesSent++;
 				}
-				
-//				System.out.println("Supp send: " + enquire);
-				myAgent.send(enquire);
+				myAgent.send(enquiry);	
 			}
-			System.out.println("No of suppliers: " + suppliers.size());
 		}
 	}
-	
+
 	public class CollectOffers extends Behaviour {
 		private int numRepliesReceived = 0;
-		
 		public CollectOffers(Agent a) {
 			super(a);
 			currentOffers.clear();
+			
 		}
 
-		
 		@Override
 		public void action() {
 			boolean received = false;
-			for(String part : parts) {
+			
+			for (String part : partsToOrder) {
 				MessageTemplate mt = MessageTemplate.MatchConversationId(part);
 				ACLMessage msg = myAgent.receive(mt);
-				if(msg != null) {
+				if (msg != null) {
 					received = true;
 					numRepliesReceived++;
-					if(msg.getPerformative() == ACLMessage.PROPOSE) {
-						//we have an offer
-						if(!currentOffers.containsKey(part)) {
+					if (msg.getPerformative() == ACLMessage.PROPOSE) {
+						// we have an offer
+						if (!currentOffers.containsKey(part)) {
 							proposal = msg.getContent().split(",");
 							ArrayList<Offer> offers = new ArrayList<>();
-							
-							offers.add(new Offer(msg.getSender(),
-									Integer.parseInt(proposal[0]),Integer.parseInt(proposal[1])));
+							offers.add(new Offer(msg.getSender(), Integer.parseInt(proposal[0]),
+									Integer.parseInt(proposal[1])));
 							currentOffers.put(part, offers);
 						}
-						//subsequent offers
+						// subsequent offers
 						else {
 							ArrayList<Offer> offers = currentOffers.get(part);
-							offers.add(new Offer(msg.getSender(),
-									Integer.parseInt(proposal[0]),Integer.parseInt(proposal[1])));
-						}			
+							offers.add(new Offer(msg.getSender(), Integer.parseInt(proposal[0]),
+									Integer.parseInt(proposal[1])));
+						}
 					}
 				}
 			}
-			if(!received) {
+			if (!received) {
 				block();
 			}
 		}
 
 		@Override
 		public boolean done() {
+			
 			return numRepliesReceived == queriesSent;
+			
 		}
 
 		@Override
 		public int onEnd() {
-			//print the offers
-			for(String part : parts) {
-				if(currentOffers.containsKey(part)) {
+			// print the offers
+			System.out.println(partsToOrder.size());
+			for (String part : partsToOrder) {
+				if (currentOffers.containsKey(part)) {
 					ArrayList<Offer> offers = currentOffers.get(part);
-					for(Offer o : offers) {
-						System.out.println(part + "," + o.getSeller().getLocalName() + ",£" + o.getPrice() + " DT: "+ o.getDeliveryTimeDays());
+					for (Offer o : offers) {
+						System.out.println(part + "," + o.getSeller().getLocalName() + ",£" + o.getPrice() + " DT: "
+								+ o.getDeliveryTimeDays());
 					}
-				}
-				else {
+				} else {
 					System.out.println("No offers for " + part);
 				}
 			}
+			System.out.println(partsToOrder);
+			partsToOrder.clear();
+			System.out.println(partsToOrder);
+
+			
 			return 0;
 		}
 	}
-		
+
 	public class EndDay extends OneShotBehaviour {
 
 		public EndDay(Agent a) {
@@ -238,18 +245,17 @@ public class ManufacturerAgent extends Agent {
 
 		@Override
 		public void action() {
-			ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
-			msg.addReceiver(tickerAgent);
-			System.out.println(tickerAgent);
-			msg.setContent("done");
-			myAgent.send(msg);
-			// send a message to each seller that we have finished
-			ACLMessage supDone = new ACLMessage(ACLMessage.INFORM);
-			supDone.setContent("done");
-			for (AID supp : suppliers) {
+				ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+				msg.addReceiver(tickerAgent);
+				msg.setContent("done");
+				myAgent.send(msg);
+				// send a message to each seller that we have finished
+				ACLMessage supDone = new ACLMessage(ACLMessage.INFORM);
+				supDone.setContent("done");
+				for (AID supplier : suppliers) {
+					supDone.addReceiver(supplier);
+				}
 				myAgent.send(supDone);
 			}
-		}
-
 	}
 }

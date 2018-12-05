@@ -14,7 +14,6 @@ import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
-import set10111.pc_shop.ManufacturerAgent.TickerDayWaiter;
 
 public class SupplierAgent extends Agent {
 
@@ -95,17 +94,16 @@ public class SupplierAgent extends Agent {
 
 		@Override
 		public void action() {
-			DFAgentDescription buyerTemplate = new DFAgentDescription();
+			DFAgentDescription manufacturerTemplate = new DFAgentDescription();
 			ServiceDescription sd = new ServiceDescription();
 			sd.setType("manufacturer");
-			buyerTemplate.addServices(sd);
+			manufacturerTemplate.addServices(sd);
 			try {
 				manufacturers.clear();
-				DFAgentDescription[] agentsType1 = DFService.search(myAgent, buyerTemplate);
+				DFAgentDescription[] agentsType1 = DFService.search(myAgent, manufacturerTemplate);
 				for (int i = 0; i < agentsType1.length; i++) {
 					manufacturers.add(agentsType1[i].getName()); // this is the AID
 				}
-				System.out.println("\nManuf: " + manufacturers);
 			}
 
 			catch (FIPAException e) {
@@ -156,13 +154,12 @@ public class SupplierAgent extends Agent {
 				} else {
 					reply.setPerformative(ACLMessage.REFUSE);
 				}
-				System.out.println(reply);
 				myAgent.send(reply);
 			}
 			else {
 				block();
 			}
-
+			
 		}
 
 	}
@@ -198,6 +195,5 @@ public class SupplierAgent extends Agent {
 				myAgent.removeBehaviour(this);
 			}
 		}
-
 	}
 }

@@ -18,10 +18,7 @@ import java.util.Random;
 public class CustomerAgent extends Agent {
 
 	private AID tickerAgent;
-	private AID manufacturer;
 	private ArrayList<AID> manufacturers = new ArrayList<>();
-	private ArrayList<String> pcSpecs = new ArrayList<>();
-
 	private String cpu = "";
 	private String motherboard = "";
 	private String screen = "";
@@ -48,7 +45,6 @@ public class CustomerAgent extends Agent {
 			e.printStackTrace();
 		}
 
-		
 		addBehaviour(new TickerWaiter(this));
 	}
 
@@ -62,7 +58,6 @@ public class CustomerAgent extends Agent {
 			e.printStackTrace();
 		}
 	}
-
 
 	public class TickerWaiter extends CyclicBehaviour {
 		public TickerWaiter(Agent a) {
@@ -82,8 +77,8 @@ public class CustomerAgent extends Agent {
 					// spawn new sequential behaviour for day's activities
 					SequentialBehaviour dailyActivity = new SequentialBehaviour();
 					// sub-behaviours will execute in the order they are added
-					dailyActivity.addSubBehaviour(new GenerateCustomerOrders());
 					dailyActivity.addSubBehaviour(new FindManufacturers(myAgent));
+					dailyActivity.addSubBehaviour(new GenerateCustomerOrders());
 					dailyActivity.addSubBehaviour(new SendOrder(myAgent));
 					dailyActivity.addSubBehaviour(new EndDay(myAgent));
 					myAgent.addBehaviour(dailyActivity);
@@ -97,17 +92,37 @@ public class CustomerAgent extends Agent {
 		}
 
 	}
-	
+
+	public class FindManufacturers extends OneShotBehaviour {
+		public FindManufacturers(Agent a) {
+			super(a);
+		}
+
+		@Override
+		public void action() {
+			DFAgentDescription manuTemplate = new DFAgentDescription();
+			ServiceDescription sd = new ServiceDescription();
+			manuTemplate.addServices(sd);
+			try {
+				manufacturers.clear();
+				DFAgentDescription[] agentType1 = DFService.search(myAgent, manuTemplate);
+				for (int i = 0; i < agentType1.length; i++) {
+					manufacturers.add(agentType1[i].getName());
+				}
+			} catch (FIPAException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
 	public class GenerateCustomerOrders extends OneShotBehaviour {
 		public void action() {
-			
+
 			order = "";
 			// Get random generated order
 			quantity = (int) Math.floor(1 + 50 * Math.random());
 			price = quantity * Math.floor(600 + 200 * Math.random());
 			dueInDays = (int) Math.floor(1 + 10 * Math.random());
-			
-			System.out.println(quantity);
 
 			// Choose between laptop and desktop pc
 			if (Math.random() < 0.5) {
@@ -140,32 +155,8 @@ public class CustomerAgent extends Agent {
 			} else {
 				os = "linux";
 			}
-			order = cpu + "," + motherboard + "," + screen + "," + memory + "," + storage + "," + os + "," + quantity + ","
-					+ price + "," + dueInDays;
-			System.out.println(order);
-
-		}
-	}
-
-	public class FindManufacturers extends OneShotBehaviour {
-		public FindManufacturers(Agent a) {
-			super(a);
-		}
-
-		@Override
-		public void action() {
-			DFAgentDescription manuTemplate = new DFAgentDescription();
-			ServiceDescription sd = new ServiceDescription();
-			manuTemplate.addServices(sd);
-			try {
-				manufacturers.clear();
-				DFAgentDescription[] agentType1 = DFService.search(myAgent, manuTemplate);
-				for (int i = 0; i < agentType1.length; i++) {
-					manufacturers.add(agentType1[i].getName());
-				}
-			} catch (FIPAException e) {
-				e.printStackTrace();
-			}
+			order = cpu + "," + motherboard + "," + screen + "," + memory + "," + storage + "," + os + "," + quantity
+					+ "," + price + "," + dueInDays;
 		}
 	}
 
@@ -178,20 +169,19 @@ public class CustomerAgent extends Agent {
 		public void action() {
 			ACLMessage pcOrder = new ACLMessage(ACLMessage.INFORM);
 			pcOrder.setContent(order);
+			pcOrder.setConversationId("order");
 			for (AID manu : manufacturers) {
 				pcOrder.addReceiver(manu);
 			}
 			myAgent.send(pcOrder);
-
 		}
-
 	}
 
 	public class EndDay extends OneShotBehaviour {
 		public EndDay(Agent a) {
 			super(a);
 		}
-		
+
 		@Override
 		public void action() {
 			ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
@@ -199,12 +189,6 @@ public class CustomerAgent extends Agent {
 			msg.setContent("done");
 			myAgent.send(msg);
 			// send a message to each seller that we have finished
-			ACLMessage manDone = new ACLMessage(ACLMessage.INFORM);
-			manDone.setContent("done");
-			for (AID manu : manufacturers) {
-				manDone.addReceiver(manu);
-			}
-			myAgent.send(manDone);
 		}
 	}
 }

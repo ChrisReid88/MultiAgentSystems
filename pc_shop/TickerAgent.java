@@ -29,7 +29,7 @@ public class TickerAgent extends Agent {
 		} catch (FIPAException e) {
 			e.printStackTrace();
 		}
-		doWait(1000);
+		doWait(2000);
 		addBehaviour(new SynchAgentsBehaviour(this));
 	}
 
@@ -131,7 +131,7 @@ public class TickerAgent extends Agent {
 
 		@Override
 		public int onEnd() {
-			System.out.println("End of Day");
+			System.out.println("End of Day " + day);
 			if (day == NUM_DAYS) {
 				ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
 				msg.setContent("terminate");
