@@ -170,13 +170,14 @@ public class ManufacturerAgent extends Agent {
 		public CollectOffers(Agent a) {
 			super(a);
 			currentOffers.clear();
-			
+			doWait(500);
+
 		}
 
 		@Override
 		public void action() {
 			boolean received = false;
-			
+
 			for (String part : partsToOrder) {
 				MessageTemplate mt = MessageTemplate.MatchConversationId(part);
 				ACLMessage msg = myAgent.receive(mt);
@@ -216,7 +217,6 @@ public class ManufacturerAgent extends Agent {
 		@Override
 		public int onEnd() {
 			// print the offers
-			System.out.println(partsToOrder.size());
 			for (String part : partsToOrder) {
 				if (currentOffers.containsKey(part)) {
 					ArrayList<Offer> offers = currentOffers.get(part);
@@ -230,7 +230,7 @@ public class ManufacturerAgent extends Agent {
 			}
 			System.out.println(partsToOrder);
 			partsToOrder.clear();
-			System.out.println(partsToOrder);
+
 
 			
 			return 0;

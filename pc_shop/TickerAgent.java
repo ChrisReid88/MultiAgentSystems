@@ -14,7 +14,7 @@ import jade.lang.acl.MessageTemplate;
 
 public class TickerAgent extends Agent {
 
-	public static final int NUM_DAYS = 10;
+	public static final int NUM_DAYS = 90;
 
 	protected void setup() {
 		DFAgentDescription dfd = new DFAgentDescription();
