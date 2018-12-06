@@ -26,7 +26,7 @@ public class Application {
 			
 			AgentController supplier = myContainer.createNewAgent("supplier", SupplierAgent.class.getCanonicalName(), null);
 			supplier.start();
-			
+
 			AgentController ticker = myContainer.createNewAgent("ticker", TickerAgent.class.getCanonicalName(), null);
 			ticker.start();
 			

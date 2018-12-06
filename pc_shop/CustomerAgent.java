@@ -19,15 +19,7 @@ public class CustomerAgent extends Agent {
 
 	private AID tickerAgent;
 	private ArrayList<AID> manufacturers = new ArrayList<>();
-	private String cpu = "";
-	private String motherboard = "";
-	private String screen = "";
-	private String memory = "";
-	private String storage = "";
-	private String os = "";
-	private int quantity;
-	private double price;
-	private int dueInDays;
+
 	private String order;
 
 	protected void setup() {
@@ -117,8 +109,17 @@ public class CustomerAgent extends Agent {
 
 	public class GenerateCustomerOrders extends OneShotBehaviour {
 		public void action() {
-
+			String cpu = "";
+			String motherboard = "";
+			String screen = "";
+			String memory = "";
+			String storage = "";
+			String os = "";
+			int quantity;
+			double price;
+			int dueInDays;
 			order = "";
+			
 			// Get random generated order
 			quantity = (int) Math.floor(1 + 50 * Math.random());
 			price = quantity * Math.floor(600 + 200 * Math.random());
@@ -157,6 +158,7 @@ public class CustomerAgent extends Agent {
 			}
 			order = cpu + "," + motherboard + "," + screen + "," + memory + "," + storage + "," + os + "," + quantity
 					+ "," + price + "," + dueInDays;
+			System.out.println(order);
 		}
 	}
 

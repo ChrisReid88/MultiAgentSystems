@@ -45,7 +45,7 @@ public class SupplierAgent extends Agent {
 	// Put agent clean-up operations here
 	protected void takeDown() {
 		// Printout a dismissal message
-		System.out.println("Customer-agent " + getAID().getName() + " terminating.");
+		System.out.println("Supplier-agent " + getAID().getName() + " terminating.");
 		try {
 			DFService.deregister(this);
 		} catch (FIPAException e) {
@@ -73,8 +73,11 @@ public class SupplierAgent extends Agent {
 					myAgent.addBehaviour(new SupplierType());
 					CyclicBehaviour os = new OffersServer(myAgent);
 					myAgent.addBehaviour(os);
+					CyclicBehaviour pos = new PurchaseOffersServer(myAgent);
+					myAgent.addBehaviour(pos);
 					ArrayList<Behaviour> cyclicBehaviours = new ArrayList<>();
 					cyclicBehaviours.add(os);
+					cyclicBehaviours.add(pos);
 					myAgent.addBehaviour(new EndDayListener(myAgent, cyclicBehaviours));
 				} else {
 					// termination message to end simulation
@@ -159,10 +162,35 @@ public class SupplierAgent extends Agent {
 			else {
 				block();
 			}
-			
 		}
-
 	}
+	
+	public class PurchaseOffersServer extends CyclicBehaviour {
+		
+		public PurchaseOffersServer(Agent a) {
+			super(a);
+		}
+		
+		@Override
+		public void action() {
+			MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.ACCEPT_PROPOSAL);
+			ACLMessage msg = myAgent.receive(mt);
+			if (msg != null) {
+				String part = msg.getContent();
+				ACLMessage reply = msg.createReply();
+				if (partsForSale.containsKey(part)) {
+					String partPrice = String.valueOf(partsForSale.get(part));
+					String message = part + "," + partPrice;
+					reply.setPerformative(ACLMessage.INFORM);				
+					reply.setContent(message);
+				}
+				myAgent.send(reply);
+				
+			}
+		}
+		
+	}
+	
 
 	public class EndDayListener extends CyclicBehaviour {
 		private int manuFinished = 0;
