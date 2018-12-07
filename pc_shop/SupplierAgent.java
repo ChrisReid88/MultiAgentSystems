@@ -15,6 +15,7 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 
+//Supplier agent that sends parts to the manufacturer
 public class SupplierAgent extends Agent {
 
 	private HashMap<String, Integer> partsForSale = new HashMap<>();
@@ -22,6 +23,8 @@ public class SupplierAgent extends Agent {
 	private ArrayList<AID> manufacturers = new ArrayList<>();
 	private AID tickerAgent;
 	private int deliveryTime = 1;
+	private int day = 1;
+	private String message;
 
 	protected void setup() {
 
@@ -39,10 +42,22 @@ public class SupplierAgent extends Agent {
 			e.printStackTrace();
 		}
 		addBehaviour(new TickerDayWaiter(this));
+		partsForSale.clear();
 
+		partsForSale.put("laptopCPU", 200);
+		partsForSale.put("desktopCPU", 150);
+		partsForSale.put("laptopMotherboard", 125);
+		partsForSale.put("desktopMotherboard", 75);
+		partsForSale.put("8Gb", 50);
+		partsForSale.put("16Gb", 90);
+		partsForSale.put("1Tb", 50);
+		partsForSale.put("2Tb", 75);
+		partsForSale.put("windows", 75);
+		partsForSale.put("linux", 0);
+		partsForSale.put("screen", 100);
 	}
 
-	// Put agent clean-up operations here
+	// Deregister from the yellow pages
 	protected void takeDown() {
 		// Printout a dismissal message
 		System.out.println("Supplier-agent " + getAID().getName() + " terminating.");
@@ -53,6 +68,7 @@ public class SupplierAgent extends Agent {
 		}
 	}
 
+	// synchronise agent on new day
 	public class TickerDayWaiter extends CyclicBehaviour {
 		public TickerDayWaiter(Agent a) {
 			super(a);
@@ -70,7 +86,6 @@ public class SupplierAgent extends Agent {
 				}
 				if (msg.getContent().equals("new day")) {
 					myAgent.addBehaviour(new FindManufacturers(myAgent));
-					myAgent.addBehaviour(new SupplierType());
 					CyclicBehaviour os = new OffersServer(myAgent);
 					myAgent.addBehaviour(os);
 					CyclicBehaviour pos = new PurchaseOffersServer(myAgent);
@@ -89,6 +104,7 @@ public class SupplierAgent extends Agent {
 		}
 	}
 
+	// Save manufactures AID's in an array
 	public class FindManufacturers extends OneShotBehaviour {
 
 		public FindManufacturers(Agent a) {
@@ -117,24 +133,7 @@ public class SupplierAgent extends Agent {
 
 	}
 
-	public class SupplierType extends OneShotBehaviour {
-		public void action() {
-			partsForSale.clear();
-
-			partsForSale.put("laptopCPU", 200);
-			partsForSale.put("desktopCPU", 150);
-			partsForSale.put("laptopMotherboard", 125);
-			partsForSale.put("desktopMotherboard", 75);
-			partsForSale.put("8Gb", 50);
-			partsForSale.put("16Gb", 90);
-			partsForSale.put("1Tb", 50);
-			partsForSale.put("2Tb", 75);
-			partsForSale.put("windows", 75);
-			partsForSale.put("linux", 0);
-			partsForSale.put("screen", 100);
-		}
-	}
-
+	// Server to listen for call-for-proposals and makes an offer.
 	public class OffersServer extends CyclicBehaviour {
 
 		public OffersServer(Agent a) {
@@ -158,19 +157,19 @@ public class SupplierAgent extends Agent {
 					reply.setPerformative(ACLMessage.REFUSE);
 				}
 				myAgent.send(reply);
-			}
-			else {
+			} else {
 				block();
 			}
 		}
 	}
-	
+
+	// Server to listen for accept proposals
 	public class PurchaseOffersServer extends CyclicBehaviour {
-		
+
 		public PurchaseOffersServer(Agent a) {
 			super(a);
 		}
-		
+
 		@Override
 		public void action() {
 			MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.ACCEPT_PROPOSAL);
@@ -178,20 +177,23 @@ public class SupplierAgent extends Agent {
 			if (msg != null) {
 				String part = msg.getContent();
 				ACLMessage reply = msg.createReply();
+				int dayOfDelivery = deliveryTime + day;
 				if (partsForSale.containsKey(part)) {
 					String partPrice = String.valueOf(partsForSale.get(part));
-					String message = part + "," + partPrice;
-					reply.setPerformative(ACLMessage.INFORM);				
+					message = part + "," + partPrice + "," + dayOfDelivery;
+					reply.setPerformative(ACLMessage.INFORM);
 					reply.setContent(message);
 				}
 				myAgent.send(reply);
-				
+
+			} else {
+				block();
 			}
 		}
-		
 	}
-	
 
+	// listen for a done message from the manufacturer. When received send
+	// one to the ticker agent to inform of end of day.
 	public class EndDayListener extends CyclicBehaviour {
 		private int manuFinished = 0;
 		private List<Behaviour> toRemove;
@@ -220,6 +222,7 @@ public class SupplierAgent extends Agent {
 				for (Behaviour b : toRemove) {
 					myAgent.removeBehaviour(b);
 				}
+				day++;
 				myAgent.removeBehaviour(this);
 			}
 		}

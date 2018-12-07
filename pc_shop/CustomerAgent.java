@@ -15,11 +15,13 @@ import jade.lang.acl.MessageTemplate;
 import java.util.ArrayList;
 import java.util.Random;
 
+/*
+ * Customer Agent that communicates with a manufacturer Agent
+ */
 public class CustomerAgent extends Agent {
 
 	private AID tickerAgent;
 	private ArrayList<AID> manufacturers = new ArrayList<>();
-
 	private String order;
 
 	protected void setup() {
@@ -51,6 +53,7 @@ public class CustomerAgent extends Agent {
 		}
 	}
 
+	// Start the agents behaviours when they receive a new day
 	public class TickerWaiter extends CyclicBehaviour {
 		public TickerWaiter(Agent a) {
 			super(a);
@@ -66,7 +69,6 @@ public class CustomerAgent extends Agent {
 					tickerAgent = msg.getSender();
 				}
 				if (msg.getContent().equals("new day")) {
-					// spawn new sequential behaviour for day's activities
 					SequentialBehaviour dailyActivity = new SequentialBehaviour();
 					// sub-behaviours will execute in the order they are added
 					dailyActivity.addSubBehaviour(new FindManufacturers(myAgent));
@@ -85,6 +87,7 @@ public class CustomerAgent extends Agent {
 
 	}
 
+	// Find all manufacturers that are in the yellow pages
 	public class FindManufacturers extends OneShotBehaviour {
 		public FindManufacturers(Agent a) {
 			super(a);
@@ -107,6 +110,7 @@ public class CustomerAgent extends Agent {
 		}
 	}
 
+	// Generate customer orders at random
 	public class GenerateCustomerOrders extends OneShotBehaviour {
 		public void action() {
 			String cpu = "";
@@ -119,7 +123,7 @@ public class CustomerAgent extends Agent {
 			double price;
 			int dueInDays;
 			order = "";
-			
+
 			// Get random generated order
 			quantity = (int) Math.floor(1 + 50 * Math.random());
 			price = quantity * Math.floor(600 + 200 * Math.random());
@@ -158,10 +162,10 @@ public class CustomerAgent extends Agent {
 			}
 			order = cpu + "," + motherboard + "," + screen + "," + memory + "," + storage + "," + os + "," + quantity
 					+ "," + price + "," + dueInDays;
-			System.out.println(order);
 		}
 	}
 
+	// Send order to the manufacturers
 	public class SendOrder extends OneShotBehaviour {
 		public SendOrder(Agent a) {
 			super(a);
@@ -176,9 +180,11 @@ public class CustomerAgent extends Agent {
 				pcOrder.addReceiver(manu);
 			}
 			myAgent.send(pcOrder);
+
 		}
 	}
 
+	// Inform the ticker agent that the customer is done
 	public class EndDay extends OneShotBehaviour {
 		public EndDay(Agent a) {
 			super(a);

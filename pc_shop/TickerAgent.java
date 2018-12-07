@@ -12,6 +12,7 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 
+// Used to synchronise the agents in the same day.
 public class TickerAgent extends Agent {
 
 	public static final int NUM_DAYS = 90;
@@ -73,20 +74,20 @@ public class TickerAgent extends Agent {
 				template3.addServices(sd3);
 
 				try {
-					DFAgentDescription[] agentsType1  = DFService.search(myAgent,template1); 
-					for(int i=0; i<agentsType1.length; i++){
+					DFAgentDescription[] agentsType1 = DFService.search(myAgent, template1);
+					for (int i = 0; i < agentsType1.length; i++) {
 						systemAgents.add(agentsType1[i].getName()); // this is the AID
 					}
-					DFAgentDescription[] agentsType2  = DFService.search(myAgent,template2); 
-					for(int i=0; i<agentsType2.length; i++){
+					DFAgentDescription[] agentsType2 = DFService.search(myAgent, template2);
+					for (int i = 0; i < agentsType2.length; i++) {
 						systemAgents.add(agentsType2[i].getName()); // this is the AID
 					}
-					
-					DFAgentDescription[] agentsType3  = DFService.search(myAgent,template3); 
-					for(int i=0; i<agentsType3.length; i++){
+
+					DFAgentDescription[] agentsType3 = DFService.search(myAgent, template3);
+					for (int i = 0; i < agentsType3.length; i++) {
 						systemAgents.add(agentsType3[i].getName()); // this is the AID
 					}
-					
+
 				} catch (FIPAException e) {
 					e.printStackTrace();
 				}
@@ -106,7 +107,7 @@ public class TickerAgent extends Agent {
 				ACLMessage msg = myAgent.receive(mt);
 				if (msg != null) {
 					numFinReceived++;
-					
+
 					if (numFinReceived >= systemAgents.size()) {
 						step++;
 					}
@@ -131,7 +132,7 @@ public class TickerAgent extends Agent {
 
 		@Override
 		public int onEnd() {
-			System.out.println("End of Day " + day);
+//			System.out.println("End of Day " + day);
 			if (day == NUM_DAYS) {
 				ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
 				msg.setContent("terminate");

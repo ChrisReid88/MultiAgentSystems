@@ -6,6 +6,7 @@ import jade.core.Runtime;
 import jade.wrapper.AgentController;
 import jade.wrapper.ContainerController;
 
+// Start the application and start a customer agent, a manufacturer agent and supplier agent.
 public class Application {
 
 	public static void main(String[] args) {
